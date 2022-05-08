@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <title>Tester</title>
+</head>
+<body>
+    <div id="app">
+        <header class="p-3 bg-dark text-white">
+            <div class="container">
+                <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+                    <div class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                        <span class="text-white">Выберите предмет:</span>
+                        <select id="lessons" class="dropdown" @change="getQuestions">
+                            <option 
+                                :value="file.value"
+                                v-for="file in fileNames"
+                            >{{file.title}}</option>
+                        </select>
+                    </div>
+                    <div class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                        <button 
+                            @click="handleOpenUploadButton"
+                            class="btn btn-primary apply-button"
+                        >Загрузить</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <br>
+        <div class="bg-light border" v-if="showFileUpload">
+            <input type="file" id="file">
+            <button 
+                type="button" 
+                class="btn btn-warning apply-button" 
+                @click="handleUploadFileButton"
+            >Отправить</button>
+        </div>
+        <div class="question_and_filters_container">
+            <div class="bg-light border rounded-3 question_settings">
+                <header class="button_container">
+                    <span>Фильтры</span>
+                </header>
+
+                <p class="filter_title">
+                    <span>Диапозон вопросов</span>
+                    <!-- <svg @click="addIntervalFilter" xmlns="http://www.w3.org/2000/svg" fill="#ffc107" viewBox="0 0 24 24" width="24px" height="24px">    <path d="M12,2C6.477,2,2,6.477,2,12s4.477,10,10,10s10-4.477,10-10S17.523,2,12,2z M17,13h-4v4h-2v-4H7v-2h4V7h2v4h4V13z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ffc107" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm7 14h-14v-4h14v4z"/></svg> -->
+                </p>
+                <div class="filter_content">
+                    <div class="interval">
+                        от
+                        <input type="number" v-model="filters.min">
+                        &nbsp;до
+                        <input type="number"  v-model="filters.max">
+                    </div>
+                </div>
+<!-- 
+                <p class="filter_title"><span>Количество вопросов на вывод</span><svg @click="addCountFilter" xmlns="http://www.w3.org/2000/svg" fill="#ffc107" viewBox="0 0 24 24" width="24px" height="24px">    <path d="M12,2C6.477,2,2,6.477,2,12s4.477,10,10,10s10-4.477,10-10S17.523,2,12,2z M17,13h-4v4h-2v-4H7v-2h4V7h2v4h4V13z"/></svg></p>
+                <div class="filter_content">
+                    <input type="number" v-model="filters.questions_count">
+                </div> -->
+                <button type="button" class="btn btn-warning apply-button" @click="applyFilter">Применить</button>
+            </div>
+            <div class="bg-light border rounded-3 questions">
+                <header class="button_container">
+                    <span class="button_page_changer" @click="prevPage">Назад</span>
+                    <span>{{ questionIndex + 1 }} / {{ questionsToShow.length }}</span>
+                    <span class="button_page_changer" @click="nextPage">Вперёд</span>
+                </header>
+                <div class="content">
+                    <h5>{{ questionsToShow[questionIndex]?.question }}</h5>
+                    <ul class="answers">
+                        <li
+                            class="answer"
+                            @click="checkAnswer(answer)"
+                            v-for="answer in shuffledAnswers"
+                        >
+                            {{ answer.answerText }}
+                        </li>
+                    </ul>
+                </div>
+                <footer class="footer">
+                    <div v-html="answerStatus" class="message"></div>
+                </footer>
+            </div>
+        </div>
+    </div>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+
+new Vue({
+    el: '#app',
+    data: {
+        questionIndex: 0,
+        questions: [],
+        questionsToShow: [],
+
+        answerStatus: '',
+
+        filters: {},
+
+        showFileUpload: false,
+        fileNames: [],
+    },
+    async mounted() {
+        if (!this.isUserAuthorized) document.location = 'auth.html';
+        const parsedCookie = document.cookie
+            .split(';')
+            .map(v => v.split('='))
+            .reduce((acc, v) => {
+                acc[decodeURIComponent(v[0].trim())] = decodeURIComponent(v[1].trim());
+                return acc;
+            }, {});
+        const {data} = await axios.get('/tester/getFilesNames.php', {
+            params: {id: parsedCookie['x-questparse-id']}
+        });
+
+        this.fileNames = data;
+        await axios.get('/tester/getQuestions.php?lesson=' + this.fileNames[0].value).then(data => {
+            this.questions = JSON.parse(JSON.stringify(data.data));
+            this.questionsToShow = data.data.sort((a, b) => 0.5 - Math.random());
+        });
+    },
+    methods: {
+        getQuestions() {
+            const lesson = document.getElementById('lessons').value;
+            this.questionIndex = 0;
+            axios.get('/tester/getQuestions.php?lesson=' + lesson).then(data => {
+                this.questions = JSON.parse(JSON.stringify(data.data));
+                this.questionsToShow = data.data.sort((a, b) => 0.5 - Math.random());
+            });
+        },
+        prevPage() {
+            if (this.questionIndex) this.questionIndex -= 1;
+            this.answerStatus = '';
+        },
+        nextPage() {
+            if (this.questionIndex < this.questionsToShow.length - 1) this.questionIndex += 1;
+            this.answerStatus = '';
+        },
+        checkAnswer(answer) {
+            if (answer.isRight) {
+                this.answerStatus = '<span style="color: green">Верно</span>';
+            } else {
+                this.answerStatus = '<span style="color: red">Не верно</span>';
+            }
+        },
+        applyFilter() {
+            console.log(this.questions)
+            this.questionsToShow = this.questions
+                .slice(+this.filters.min, +this.filters.max);
+            this.questionsToShow.sort((a, b) => 0.5 - Math.random());
+            this.questionIndex = 0;
+            this.answerStatus = '';
+        },
+        addCountFilter() {
+            this.questionsToShow = this.questions
+                .slice(+this.filters.min, +this.filters.max)
+                .sort((a, b) => 0.5 - Math.random());
+            this.questionIndex = 0;
+            this.answerStatus = '';
+        },
+        async handleUploadFileButton() {
+            var formData = new FormData();
+            var file = document.querySelector('#file');
+            formData.append('questions', file.files[0]);
+            const parsedCookie = document.cookie
+                .split(';')
+                .map(v => v.split('='))
+                .reduce((acc, v) => {
+                    acc[decodeURIComponent(v[0].trim())] = decodeURIComponent(v[1].trim());
+                    return acc;
+                }, {});
+
+            formData.append('id', parsedCookie['x-questparse-id']);
+
+            await axios.post('upload.php', formData, {
+                headers: {
+                'Content-Type': 'multipart/form-data'
+                }
+            });
+            location.reload();
+        },
+        handleOpenUploadButton() {
+            this.showFileUpload = true;
+        }
+    },
+    computed: {
+        shuffledAnswers() {
+            return this.questionsToShow[this.questionIndex]
+                ?.answers
+                .sort((a, b) => 0.5 - Math.random());
+        },
+        isUserAuthorized() {
+            if (!document.cookie) return false;
+            const parsedCookie = document.cookie
+                .split(';')
+                .map(v => v.split('='))
+                .reduce((acc, v) => {
+                    acc[decodeURIComponent(v[0].trim())] = decodeURIComponent(v[1].trim());
+                    return acc;
+                }, {});
+            if (
+                parsedCookie['x-questparse-email'] 
+                && parsedCookie['x-questparse-password'] 
+            ) return true;
+
+            return false;
+        }
+    }
+})
+
+</script>
+</body>
+</html>
