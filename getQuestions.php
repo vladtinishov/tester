@@ -1,4 +1,7 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, PUT");
+header('Access-Control-Allow-Headers: *');
 
 if (isset($_GET['lesson'])) {
     getQuestions($_GET['lesson']);

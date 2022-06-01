@@ -1,5 +1,9 @@
 <?php
 
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, PUT");
+header('Access-Control-Allow-Headers: *');
+
 $id = $_GET['id'];
 $dir = 'questions';
 $files = scandir($dir);

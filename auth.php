@@ -1,8 +1,14 @@
 <?php
 
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, PUT");
+header('Access-Control-Allow-Headers: *');
+
+include 'db.php';
+
 $requestData = json_decode(file_get_contents('php://input'), true);
 
-$conn = new mysqli('localhost', 'id13161526_root', 'A/$xm3%3q2}IK3^g', 'id13161526_questions');
+$conn = new mysqli($host, $userName, $pass, $db);
 // Check connection
 if ($conn->connect_error) {
   die("Connection failed: " . $conn->connect_error);

@@ -1,4 +1,8 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, PUT");
+header('Access-Control-Allow-Headers: *');
+
 $target_dir = "questions/";
 $target_file = $target_dir . $_POST['id'] . '||' . basename($_FILES["questions"]["name"]);
 $uploadOk = 1;
